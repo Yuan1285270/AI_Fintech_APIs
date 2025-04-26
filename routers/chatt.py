@@ -1,25 +1,24 @@
-# chat.py
+# 📄 chat.py
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import requests
 import os
 from dotenv import load_dotenv
 
-# 載入本地 .env（開發用）
+# 讀取 .env 檔
 load_dotenv()
 
 router = APIRouter()
 
-# 從環境變數中取得 Gemini API Key
+# 取得 Gemini API Key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={GEMINI_API_KEY}"
 
-# 訊息格式
+# 資料結構
 class Message(BaseModel):
     role: str
     message: str
 
-# 請求格式（新增分析用欄位）
 class ChatRequest(BaseModel):
     messages: list[Message]
     persona: str | None = None
@@ -27,7 +26,7 @@ class ChatRequest(BaseModel):
     saving_goal: float | None = None
     months: int | None = None
 
-# 建立個人化引導 prompt
+# 自動組 Prompt
 def build_intro_prompt(persona: str, expenses: dict, saving_goal: float, months: int):
     return {
         "role": "user",
@@ -48,6 +47,7 @@ def build_intro_prompt(persona: str, expenses: dict, saving_goal: float, months:
         }]
     }
 
+# 核心 API
 @router.post("/chatt")
 async def chat(chat: ChatRequest):
     if not GEMINI_API_KEY:
@@ -56,9 +56,8 @@ async def chat(chat: ChatRequest):
     if not chat.messages or len(chat.messages) == 0:
         raise HTTPException(status_code=400, detail="❌ 請提供至少一筆聊天訊息")
 
-    # 判斷是「儲蓄建議分析模式」還是「一般聊天模式」
+    # 判斷：是要「自動分析模式」還是「一般聊天模式」
     if chat.persona and chat.expenses and chat.saving_goal is not None and chat.months is not None:
-        # 🟢 自動分析模式（有個人化資料）
         formatted = [build_intro_prompt(chat.persona, chat.expenses, chat.saving_goal, chat.months)] + [
             {
                 "role": msg.role,
@@ -66,7 +65,6 @@ async def chat(chat: ChatRequest):
             } for msg in chat.messages
         ]
     else:
-        # 🟡 一般聊天模式
         formatted = [
             {
                 "role": msg.role,
@@ -79,10 +77,9 @@ async def chat(chat: ChatRequest):
             GEMINI_URL,
             headers={"Content-Type": "application/json"},
             json={"contents": formatted},
-            timeout=20  # ← 原本是 10
+            timeout=20  # ⏱️ 加長timeout以防超時
         )
 
-        # 處理 Gemini 回傳
         if response.status_code != 200:
             raise HTTPException(status_code=502, detail=f"❌ Gemini API 回應錯誤（{response.status_code}）")
 
@@ -99,11 +96,7 @@ async def chat(chat: ChatRequest):
         raise HTTPException(status_code=504, detail="❌ 請求 Gemini API 超時，請稍後再試")
     except requests.exceptions.RequestException as e:
         print("🚨 Gemini連線錯誤：", e)
-        raise HTTPException(status_code=502, detail="❌ 與 Gemini API 連線失敗")
+        raise HTTPException(status_code=502, detail="❌ 無法連線到 Gemini API")
     except Exception as e:
         print("🚨 其他錯誤：", e)
         raise HTTPException(status_code=500, detail="❌ 系統內部錯誤")
-    
-    print(\"==== formatted 請求內容 ====\")
-    print(json.dumps(formatted, ensure_ascii=False, indent=2))
-
