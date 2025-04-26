@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from routers import chat
-from routers import predict, record
+from routers import predict, chatt
 from routers import analyze
 
 app = FastAPI()
