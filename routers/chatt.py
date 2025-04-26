@@ -48,7 +48,7 @@ def build_intro_prompt(persona: str, expenses: dict, saving_goal: float, months:
         }]
     }
 
-@router.post("/chat")
+@router.post("/chatt")
 async def chat(chat: ChatRequest):
     if not GEMINI_API_KEY:
         raise HTTPException(status_code=500, detail="❌ 缺少 Gemini API 金鑰")
