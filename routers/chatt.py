@@ -79,7 +79,7 @@ async def chat(chat: ChatRequest):
             GEMINI_URL,
             headers={"Content-Type": "application/json"},
             json={"contents": formatted},
-            timeout=10  # ✅ 加入 timeout，防止卡死
+            timeout=20  # ← 原本是 10
         )
 
         # 處理 Gemini 回傳
@@ -103,3 +103,7 @@ async def chat(chat: ChatRequest):
     except Exception as e:
         print("🚨 其他錯誤：", e)
         raise HTTPException(status_code=500, detail="❌ 系統內部錯誤")
+    
+    print(\"==== formatted 請求內容 ====\")
+    print(json.dumps(formatted, ensure_ascii=False, indent=2))
+
